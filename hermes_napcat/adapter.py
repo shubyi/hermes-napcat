@@ -399,15 +399,21 @@ class NapCatAdapter(BasePlatformAdapter):
         is_admin = sender_id in self._admins
         if is_admin:
             permission_prompt = (
-                f"[管理员] QQ:{sender_id} 拥有完整权限。"
-                "执行删除、踢人、禁言、shell命令等不可逆操作前，"
-                "必须先向用户说明操作内容，请求回复确认后再执行。"
+                f"[管理员] QQ:{sender_id}。"
+                "你现在运行在本机 Hermes 环境，拥有完整本地工具访问权限。"
+                "可直接调用：terminal（执行 shell 命令）、read_file（读取本机文件）、"
+                "write_file、web_search、browser、vision_analyze 等所有工具。"
+                "读取文件、查看日志、执行查询等只读操作直接执行，无需确认。"
+                "仅对真正不可逆的操作（删除文件、踢人、禁言、修改配置等）需先说明再执行。"
             )
         else:
             permission_prompt = (
                 f"[普通用户] QQ:{sender_id}。"
-                "可自由使用搜索、查询、计算、写代码、读文件等所有常规功能。"
-                "禁止：写入/删除系统文件、执行破坏性shell命令、调用QQ管理工具（踢人/禁言等）。"
+                "你现在运行在本机 Hermes 环境，可直接调用：web_search（搜索）、"
+                "read_file（只读访问本机文件）、terminal（只读/非破坏性命令）、"
+                "vision_analyze、skills_list 等工具。"
+                "禁止：写入/删除系统文件、执行破坏性 shell 命令、"
+                "调用 QQ 管理工具（踢人/禁言等）。"
                 "如请求管理操作，告知需联系管理员。"
             )
 
