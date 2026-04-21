@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hermes-napcat"
-version = "0.2.2"
+version = "0.2.3"
 description = "NapCat (QQ / OneBot 11) platform adapter for Hermes Agent"
 readme = "README.md"
 license = { text = "MIT" }

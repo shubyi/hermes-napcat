@@ -294,7 +294,12 @@ def _patch_toolsets(hermes_root: Path) -> None:
         print("  [!] Cannot locate TOOLSETS dict end — skipping")
         return
 
-    src = src[:last_brace] + _NAPCAT_TOOLSET_BLOCK + src[last_brace:]
+    # Ensure the entry just before the insertion point ends with a comma.
+    before = src[:last_brace].rstrip()
+    if before and not before.endswith(','):
+        src = before + ',\n' + _NAPCAT_TOOLSET_BLOCK + src[last_brace:]
+    else:
+        src = src[:last_brace] + _NAPCAT_TOOLSET_BLOCK + src[last_brace:]
     src = _add_to_gateway_includes(src)
 
     _write(path, src)
