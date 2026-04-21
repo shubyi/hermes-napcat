@@ -1,5 +1,7 @@
 # hermes-napcat
 
+[English](README.md) | [中文](README.zh.md)
+
 **NapCat (QQ / OneBot 11) platform adapter for [Hermes Agent](https://github.com/NousResearch/hermes-agent)**
 
 Connect Hermes to QQ via [NapCat](https://github.com/NapNeko/NapCatQQ)'s OneBot 11 reverse WebSocket. Chat with your Hermes AI assistant in any QQ group or DM, with full group management capabilities.
