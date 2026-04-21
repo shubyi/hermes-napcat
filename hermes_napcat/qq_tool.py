@@ -22,19 +22,21 @@ _http_api: str = ""
 _access_token: str = ""
 _admins: list[str] = []
 _current_sender: str = ""
+_current_is_admin: bool = False
 
 
 def _init(http_api: str, access_token: str = "", admins: list[str] | None = None) -> None:
     global _http_api, _access_token, _admins
     _http_api = http_api.rstrip("/")
     _access_token = access_token
-    _admins = [str(x) for x in (admins or [])]
+    _admins = [str(a) for a in (admins or [])]
 
 
-def _set_context(sender_id: str) -> None:
-    """Called by the adapter before each message is processed."""
-    global _current_sender
-    _current_sender = str(sender_id)
+def _set_context(sender_id: str, is_admin: bool) -> None:
+    """Called by the adapter before each message to set the current user context."""
+    global _current_sender, _current_is_admin
+    _current_sender = sender_id
+    _current_is_admin = is_admin
 
 
 def _check() -> str | None:
@@ -45,14 +47,10 @@ def _check() -> str | None:
 
 
 def _require_admin() -> str | None:
-    """Return an error string if the current sender is not an admin.
-
-    If no admins are configured, all senders are allowed (open mode).
-    """
-    if not _admins:
-        return None
-    if _current_sender not in _admins:
-        return f"Permission denied: only admins can use this command (sender: {_current_sender})."
+    """Return an error string if the current user is not an admin."""
+    if not _current_is_admin:
+        sender = _current_sender or "unknown"
+        return f"此操作需要管理员权限（当前用户 {sender} 不是管理员）。"
     return None
 
 

@@ -150,6 +150,29 @@ def _xvfb_available() -> bool:
     return shutil.which("xvfb-run") is not None
 
 
+def _napcat_has_session() -> bool:
+    """True if QQ has cached session data — enables auto-login via -q flag."""
+    config_dir = Path.home() / ".config" / "QQ"
+    if not config_dir.exists():
+        return False
+    return any(config_dir.glob("nt_qq_*/nt_db/*.db"))
+
+
+def _load_napcat_qq() -> str | None:
+    """Read self_id from ~/.hermes/config.yaml (set after first login)."""
+    try:
+        import yaml
+        p = _hermes_config_path()
+        if not p.exists():
+            return None
+        with p.open() as f:
+            cfg = yaml.safe_load(f) or {}
+        qq = cfg.get("platforms", {}).get("napcat", {}).get("extra", {}).get("self_id")
+        return str(qq) if qq and str(qq) not in ("", "YOUR_QQ_NUMBER") else None
+    except Exception:
+        return None
+
+
 def _build_start_cmd(qq: str | None = None) -> str:
     qq_arg = f" -q {qq}" if qq else ""
     xvfb = "xvfb-run -a " if _xvfb_available() else ""
@@ -157,7 +180,11 @@ def _build_start_cmd(qq: str | None = None) -> str:
 
 
 def start_napcat(qq: str | None = None) -> None:
-    """Start NapCat in a detached screen session."""
+    """Start NapCat.
+
+    - If session data exists → silent background start (no QR needed).
+    - Otherwise → QR code is printed directly in this terminal; wait for login.
+    """
     if not is_napcat_installed():
         print("NapCat is not installed.")
         if sys.stdin.isatty():
@@ -170,10 +197,6 @@ def start_napcat(qq: str | None = None) -> None:
         else:
             raise RuntimeError("NapCat is not installed. Run: hermes-napcat setup --with-napcat")
 
-    # Auto-read QQ from config to skip QR code on restart
-    if not qq:
-        qq = _get_qq_from_config()
-
     if not _screen_available():
         raise RuntimeError(
             "screen is not installed. Install it with:\n"
@@ -185,28 +208,43 @@ def start_napcat(qq: str | None = None) -> None:
         print("NapCat is already running.")
         return
 
+    qq_to_use = qq or _load_napcat_qq()
     log_file = Path(tempfile.gettempdir()) / "napcat.log"
-    cmd = _build_start_cmd(qq) + f" 2>&1 | tee {log_file}"
-    subprocess.run(
-        ["screen", "-dmS", _SCREEN_SESSION, "bash", "-c", cmd],
-        check=True,
-    )
-    print(f"✓ NapCat started (log → {log_file})")
-    print("  Waiting for QR code", end="", flush=True)
 
-    # Stream log until QR code appears, then print it
+    if qq_to_use and _napcat_has_session():
+        # Session cached → auto-login, no QR needed
+        cmd = _build_start_cmd(qq_to_use) + f" 2>&1 | tee {log_file}"
+        subprocess.run(["screen", "-dmS", _SCREEN_SESSION, "bash", "-c", cmd], check=True)
+        print(f"✓ NapCat 已启动（自动登录 {qq_to_use}）")
+        print(f"  日志 → {log_file}  |  附加：screen -r {_SCREEN_SESSION}")
+        return
+
+    # No session → need QR code; stream output directly to this terminal
     import time
-    deadline = time.time() + 30
-    printed = False
+    try:
+        log_file.unlink()
+    except FileNotFoundError:
+        pass
+
+    cmd = _build_start_cmd(qq_to_use) + f" 2>&1 | tee {log_file}"
+    subprocess.run(["screen", "-dmS", _SCREEN_SESSION, "bash", "-c", cmd], check=True)
+
+    print("  正在启动 NapCat，等待二维码...", flush=True)
+    deadline = time.time() + 90
+    qr_shown = False
+    logged_in = False
+    last_pos = 0
+
     while time.time() < deadline:
-        time.sleep(1)
-        print(".", end="", flush=True)
+        time.sleep(0.5)
         if not log_file.exists():
             continue
-        content = log_file.read_text(errors="replace")
-        if "█" in content:
-            print()  # newline after dots
-            # Extract and print just the QR block + URL line
+        try:
+            content = log_file.read_text(errors="replace")
+        except OSError:
+            continue
+
+        if not qr_shown and "█" in content:
             lines = content.splitlines()
             in_qr = False
             for line in lines:
@@ -216,13 +254,21 @@ def start_napcat(qq: str | None = None) -> None:
                     print(line)
                 if in_qr and "█" not in line and line.strip():
                     break
-            printed = True
+            qr_shown = True
+            print("\n  ↑ 用 QQ 扫码登录，等待成功...", flush=True)
+            last_pos = len(content)
+
+        if "适配器初始化完成" in content:
+            logged_in = True
             break
 
-    if not printed:
-        print()
-        print(f"  QR code not found yet. Check: tail -f {log_file}")
-        print(f"  Or attach: screen -r {_SCREEN_SESSION}")
+    if logged_in:
+        print(f"\n✓ NapCat 登录成功，已在后台运行（日志 → {log_file}）")
+    elif qr_shown:
+        print(f"\n  NapCat 仍在运行，扫码后会自动连接。日志 → {log_file}")
+    else:
+        print(f"\n  未检测到二维码，请检查日志：tail -f {log_file}")
+        print(f"  或附加 screen：screen -r {_SCREEN_SESSION}")
 
 
 def stop_napcat() -> None:
@@ -607,14 +653,14 @@ def _print_instructions(
 
     step = 1
     if include_napcat_steps:
-        print(f"{step}. Start NapCat and scan the QR code to log in:")
+        print(f"{step}. 启动 NapCat（首次需扫码，之后自动登录）：")
         print(f"     hermes-napcat napcat start")
-        print(f"     screen -r {_SCREEN_SESSION}    ← scan QR code here")
-        print(f"     Ctrl+A then D               ← detach after login\n")
+        print(f"     → 二维码直接显示在终端，扫码后自动完成登录\n")
         step += 1
     else:
-        print(f"{step}. Make sure NapCat is installed and running, then scan the QR code.")
-        print(f"   (Install NapCat separately or re-run: hermes-napcat setup --with-napcat)\n")
+        print(f"{step}. 确保 NapCat 已安装并运行：")
+        print(f"     hermes-napcat napcat start")
+        print(f"     （或先安装：hermes-napcat setup --with-napcat）\n")
         step += 1
 
     # Try to auto-write Hermes config

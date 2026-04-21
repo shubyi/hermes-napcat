@@ -17,6 +17,7 @@ Configuration in ~/.hermes/config.yaml:
           allow_from: []             # QQ numbers allowed for DMs
           group_policy: "open"       # open | allowlist | disabled
           group_allow_from: []       # falls back to allow_from
+          admins: []                 # QQ numbers that can use admin-only tools
           media_max_mb: 5
 """
 from __future__ import annotations
@@ -388,6 +389,20 @@ class NapCatAdapter(BasePlatformAdapter):
             user_name=sender_name,
         )
 
+        is_admin = sender_id in self._admins
+        if is_admin:
+            permission_prompt = (
+                f"[管理员] QQ:{sender_id} 拥有完整权限。"
+                "执行删除、踢人、禁言、shell命令等不可逆操作前，"
+                "必须先向用户说明操作内容，请求回复确认后再执行。"
+            )
+        else:
+            permission_prompt = (
+                f"[普通用户] QQ:{sender_id} 仅允许只读查询。"
+                "禁止修改系统、写文件、执行shell、删除数据或调用管理工具。"
+                "如请求此类操作，告知无权限，需联系管理员。"
+            )
+
         message_event = MessageEvent(
             text=text,
             message_type=msg_type,
@@ -399,13 +414,16 @@ class NapCatAdapter(BasePlatformAdapter):
             reply_to_message_id=str(reply_id) if reply_id else None,
             reply_to_text=reply_text,
             timestamp=datetime.fromtimestamp(event["time"]) if event.get("time") else datetime.now(),
+            channel_prompt=permission_prompt,
         )
 
+        # Set per-message context so admin-gated tools know who is asking
         try:
             from gateway.platforms import qq_tool as _qq_tool
-            _qq_tool._set_context(sender_id)
+            _qq_tool._set_context(sender_id, is_admin=is_admin)
         except ImportError:
             pass
+
         await self.handle_message(message_event)
 
     # ── Outbound ───────────────────────────────────────────────────────────
