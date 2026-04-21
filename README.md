@@ -1,10 +1,18 @@
+<div align="center">
+
 # hermes-napcat
 
-[English](README.md) | [中文](README.zh.md)
+**NapCat (QQ / OneBot 11) adapter for [Hermes Agent](https://github.com/NousResearch/hermes-agent)**
 
-**NapCat (QQ / OneBot 11) platform adapter for [Hermes Agent](https://github.com/NousResearch/hermes-agent)**
+[![PyPI](https://img.shields.io/pypi/v/hermes-napcat?color=blue)](https://pypi.org/project/hermes-napcat/)
+[![Python](https://img.shields.io/pypi/pyversions/hermes-napcat)](https://pypi.org/project/hermes-napcat/)
+[![License](https://img.shields.io/github/license/shubyi/hermes-napcat)](LICENSE)
 
-Connect Hermes to QQ via [NapCat](https://github.com/NapNeko/NapCatQQ)'s OneBot 11 reverse WebSocket. Chat with your Hermes AI assistant in any QQ group or DM, with full group management capabilities.
+[English](README.md) · [中文](README.zh.md)
+
+</div>
+
+Connect Hermes to QQ via [NapCat](https://github.com/NapNeko/NapCatQQ)'s OneBot 11 reverse WebSocket. Chat with your AI assistant in any QQ group or DM, with full group management and admin controls.
 
 ```
 QQ App ──── NapCat ──WS──▶ hermes-napcat ──▶ Hermes (LLM)
@@ -17,12 +25,12 @@ QQ App ──── NapCat ──WS──▶ hermes-napcat ──▶ Hermes (LLM
 
 ## Features
 
-- **Group & DM support** — @mention in groups, direct message for private chats
-- **Per-group shared sessions** — the whole group shares one conversation context; sender name is automatically prefixed so the AI knows who said what
-- **Admin system** — restrict management commands (mute, kick, etc.) to a configurable list of QQ numbers
-- **48 QQ management tools** — messaging, group management, file operations, OCR, reactions, and more
-- **Media support** — images, voice messages (→ WAV via ffmpeg), video, file upload/download
-- **Quoted message context** — replies include the quoted text for full conversation context
+- **Group & DM** — @mention in groups; direct message for private chats
+- **Shared group sessions** — whole group shares one context; sender names auto-prefixed
+- **Admin system** — restrict management commands to a configurable QQ number list
+- **48 QQ tools** — messaging, group management, files, OCR, reactions, and more
+- **Media support** — images, voice (→ WAV via ffmpeg), video, file upload/download
+- **Quoted message context** — replies carry the quoted content automatically
 - **One-command setup** — interactive wizard installs and configures everything
 
 ---
@@ -31,31 +39,27 @@ QQ App ──── NapCat ──WS──▶ hermes-napcat ──▶ Hermes (LLM
 
 - Python 3.11+
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent) (source install)
-- [NapCat](https://github.com/NapNeko/NapCatQQ) running with HTTP API + reverse WS
+- [NapCat](https://github.com/NapNeko/NapCatQQ) with HTTP API + reverse WS enabled
 - `aiohttp >= 3.9`
-- `ffmpeg` (optional, for voice message transcription)
+- `ffmpeg` *(optional, for voice transcription)*
 
 ---
 
-## Installation
+## Quick Start
 
-### 1. Install the package
+### 1. Install
 
 ```bash
 pip install hermes-napcat
 ```
 
-### 2. Run the setup wizard
+### 2. Setup
 
 ```bash
 hermes-napcat setup
 ```
 
-The wizard will:
-- Patch Hermes Agent (6 files) to add NapCat support
-- Write the NapCat OneBot 11 config
-- Update `~/.hermes/config.yaml`
-- Ask for your QQ number and admin list
+The wizard patches Hermes Agent, writes the NapCat config, updates `~/.hermes/config.yaml`, and asks for your QQ number and admin list.
 
 To also download and install NapCat automatically:
 
@@ -63,13 +67,10 @@ To also download and install NapCat automatically:
 hermes-napcat setup --with-napcat
 ```
 
-Or non-interactively:
+Non-interactive (CI / scripts):
 
 ```bash
-hermes-napcat setup \
-  --qq 123456789 \
-  --admins "123456789,987654321" \
-  --with-napcat
+hermes-napcat setup --qq 123456789 --admins "123456789,987654321" --with-napcat
 ```
 
 ### 3. Start NapCat
@@ -78,24 +79,12 @@ hermes-napcat setup \
 hermes-napcat napcat start
 ```
 
-The QR code is printed directly in your terminal. Scan it with the QQ app. On subsequent starts, NapCat auto-logins from cached session — no QR code needed.
+The QR code prints directly in your terminal — scan it with the QQ app. On subsequent starts NapCat auto-logins from cached session, no QR needed.
 
 ### 4. Start Hermes Gateway
 
 ```bash
 nohup hermes gateway run > /tmp/hermes-gateway.log 2>&1 &
-```
-
----
-
-## Manual Installation
-
-If you prefer to patch Hermes manually:
-
-```bash
-hermes-napcat install                          # patch Hermes only
-hermes-napcat install --hermes-dir /path/to/hermes-agent
-hermes-napcat status                           # verify all patches applied
 ```
 
 ---
@@ -114,18 +103,19 @@ platforms:
       self_id: "123456789"                  # Bot QQ number
       ws_port: 18800                        # Reverse WS listen port
       dm_policy: open                       # open | allowlist | disabled
-      allow_from: []                        # QQ numbers allowed for DMs (allowlist mode)
+      allow_from: []                        # QQ numbers allowed for DMs
       admins:                               # Can use management commands
         - "123456789"
 
 platform_toolsets:
   napcat:
+    - hermes-cli
     - hermes-napcat
 
 group_sessions_per_user: false              # Whole group shares one session
 ```
 
-### NapCat onebot11 config
+### NapCat config
 
 `~/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/onebot11.json`:
 
@@ -162,33 +152,13 @@ group_sessions_per_user: false              # Whole group shares one session
 
 ---
 
-## CLI Reference
-
-```
-hermes-napcat setup              Interactive setup wizard
-hermes-napcat setup --with-napcat  Also install NapCat
-hermes-napcat install            Patch Hermes Agent only
-hermes-napcat uninstall          Remove patches + NapCat (default: both)
-hermes-napcat uninstall --hermes-only   Remove Hermes patches only
-hermes-napcat uninstall --napcat-only   Remove NapCat binary only
-hermes-napcat status             Show installation status
-hermes-napcat napcat start       Start NapCat (screen session)
-hermes-napcat napcat stop        Stop NapCat
-hermes-napcat napcat status      Show NapCat process status
-hermes-napcat restart            Restart NapCat + Hermes Gateway
-hermes-napcat systemd install    Create and enable systemd services
-hermes-napcat systemd remove     Remove systemd services
-```
-
----
-
 ## Admin System
 
 Set `admins` in config to restrict who can use management commands:
 
 ```yaml
 admins:
-  - "123456789"    # these QQ numbers are admins
+  - "123456789"
 ```
 
 If `admins` is empty, all users can call any tool (open mode).
@@ -196,14 +166,14 @@ If `admins` is empty, all users can call any tool (open mode).
 ### Permission levels
 
 | Operation | Regular user | Admin |
-|-----------|-------------|-------|
-| Read-only queries (get info, check status) | ✅ | ✅ |
-| QQ management tools (mute, kick, set admin, etc.) | ❌ blocked | ✅ |
-| System operations (shell, file writes, delete data) | ❌ blocked | ⚠️ requires confirmation |
+|-----------|:-----------:|:-----:|
+| Search, queries, code, read files | ✅ | ✅ |
+| QQ management (mute, kick, set admin…) | ❌ | ✅ |
+| Destructive system operations | ❌ | ⚠️ confirmation required |
 
-When an admin requests a destructive or irreversible operation, the bot always explains what it will do and asks for explicit confirmation (reply "确认") before executing.
+Destructive or irreversible admin actions always require explicit confirmation before execution.
 
-**Admin-only QQ tools:** kick, mute, set_admin, rename group, whole-group ban, leave group, set portrait, set special title, set/delete essence messages, publish/delete notices, delete group files, handle friend/group requests, delete friend.
+**Admin-only QQ tools:** kick, mute, set admin, rename group, whole-group ban, leave group, set portrait, set special title, set/delete essence messages, publish/delete notices, delete group files, handle friend/group requests, delete friend.
 
 ---
 
@@ -224,8 +194,8 @@ When an admin requests a destructive or irreversible operation, the bot always e
 
 ## How It Works
 
-1. **NapCat** dials out to Hermes at `ws://127.0.0.1:18800` (reverse WebSocket)
-2. **hermes-napcat adapter** receives the OneBot 11 event, extracts text/media, checks DM/group policy, prefixes sender name in group messages
+1. **NapCat** dials out to `ws://127.0.0.1:18800` (reverse WebSocket)
+2. **hermes-napcat** receives the OneBot 11 event, extracts text/media, checks DM/group policy, prefixes sender name in group messages
 3. **Hermes Agent** processes the message with full tool access
 4. **Response** is sent back via NapCat's HTTP API at `http://127.0.0.1:18801`
 
@@ -239,20 +209,33 @@ When an admin requests a destructive or irreversible operation, the bot always e
 
 ---
 
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `hermes-napcat setup` | Interactive setup wizard |
+| `hermes-napcat setup --with-napcat` | Also download and install NapCat |
+| `hermes-napcat install` | Patch Hermes Agent only |
+| `hermes-napcat uninstall` | Remove patches + NapCat (default: both) |
+| `hermes-napcat uninstall --hermes-only` | Remove Hermes patches only |
+| `hermes-napcat uninstall --napcat-only` | Remove NapCat binary only |
+| `hermes-napcat status` | Show installation status |
+| `hermes-napcat napcat start` | Start NapCat (screen session) |
+| `hermes-napcat napcat stop` | Stop NapCat |
+| `hermes-napcat napcat status` | Show NapCat process status |
+| `hermes-napcat restart` | Restart NapCat + Hermes Gateway |
+| `hermes-napcat systemd install` | Create and enable systemd services |
+| `hermes-napcat systemd remove` | Remove systemd services |
+
+---
+
 ## Uninstall
 
 ```bash
-# Remove everything (Hermes patches + NapCat binary)
-hermes-napcat uninstall
-
-# Keep NapCat, remove only Hermes patches
-hermes-napcat uninstall --hermes-only
-
-# Keep Hermes patches, remove only NapCat
-hermes-napcat uninstall --napcat-only
-
-# Keep QQ session data
-hermes-napcat uninstall --keep-data
+hermes-napcat uninstall                  # Remove everything
+hermes-napcat uninstall --hermes-only    # Keep NapCat, remove Hermes patches
+hermes-napcat uninstall --napcat-only    # Keep Hermes patches, remove NapCat
+hermes-napcat uninstall --keep-data      # Keep QQ session data
 ```
 
 ---
@@ -270,17 +253,17 @@ hermes-napcat systemd remove
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Bot not responding in group | Not @-mentioned | @机器人 in group messages |
-| `ECONNREFUSED 127.0.0.1:18800` | Gateway not running | Start gateway: `hermes gateway run` |
-| `403 unsupported_user_agent` | API provider blocks SDK user-agent | Patch `run_agent.py` — see [Notes for specific providers](#notes-for-specific-providers) |
+| Bot not responding in group | Not @-mentioned | @mention the bot in group messages |
+| `ECONNREFUSED 127.0.0.1:18800` | Gateway not running | `hermes gateway run` |
+| `403 unsupported_user_agent` | API provider blocks SDK user-agent | See [Provider Notes](#notes-for-specific-providers) |
 | `KeyError: 'napcat'` | `platforms.py` not patched | Re-run `hermes-napcat install` |
 | `Unauthorized user` on all messages | `run.py` auth bypass missing | Re-run `hermes-napcat install` |
-| `Permission denied: only admins` | Sender not in admins list | Add QQ to `admins` in config, or set `admins: []` for open mode |
-| NapCat QR code not showing | Startup timeout | Check log: `tail -f /tmp/napcat.log` or reattach: `screen -r napcat` |
+| `Permission denied: only admins` | Sender not in admins list | Add QQ to `admins`, or set `admins: []` |
+| NapCat QR code not showing | Startup timeout | `tail -f /tmp/napcat.log` or `screen -r napcat` |
 
 ### Notes for specific providers
 
-Some API providers block requests from the OpenAI SDK's default `AsyncOpenAI/Python X.X.X` user-agent. In `~/.hermes/hermes-agent/run_agent.py`, inside `_apply_client_headers_for_base_url`, add before the `else` branch:
+Some API providers block the OpenAI SDK's default `AsyncOpenAI/Python X.X.X` user-agent. In `~/.hermes/hermes-agent/run_agent.py`, inside `_apply_client_headers_for_base_url`, add before the `else` branch:
 
 ```python
 elif "your-provider.com" in normalized:
@@ -290,7 +273,7 @@ elif "your-provider.com" in normalized:
     }
 ```
 
-Apply the same pattern in the second location (~line 1176) and in `agent/auxiliary_client.py`.
+Apply the same change at the second location (~line 1176) and in `agent/auxiliary_client.py`.
 
 ---
 
