@@ -191,6 +191,26 @@ def _build_start_cmd(qq: str | None = None) -> str:
     return f'{xvfb}{qq_bin()} --no-sandbox{qq_arg}'
 
 
+def _start_hermes_gateway() -> None:
+    """Start Hermes gateway in the background if not already running."""
+    hermes = shutil.which("hermes")
+    if not hermes:
+        print("  (hermes command not found — start gateway manually: hermes gateway run)")
+        return
+    result = subprocess.run([hermes, "gateway", "status"], capture_output=True, text=True)
+    if "active (running)" in result.stdout or "running" in result.stdout.lower():
+        print("✓ Hermes 网关已在运行")
+        return
+    log = Path(tempfile.gettempdir()) / "hermes-gateway.log"
+    subprocess.Popen(
+        [hermes, "gateway", "run", "--replace"],
+        stdout=open(log, "w"),
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    print(f"✓ Hermes 网关已启动（日志 → {log}）")
+
+
 def start_napcat(qq: str | None = None) -> None:
     """Start NapCat.
 
@@ -229,6 +249,7 @@ def start_napcat(qq: str | None = None) -> None:
         subprocess.run(["screen", "-dmS", _SCREEN_SESSION, "bash", "-c", cmd], check=True)
         print(f"✓ NapCat 已启动（自动登录 {qq_to_use}）")
         print(f"  日志 → {log_file}  |  附加：screen -r {_SCREEN_SESSION}")
+        _start_hermes_gateway()
         return
 
     # No session → need QR code; stream output directly to this terminal
@@ -276,6 +297,7 @@ def start_napcat(qq: str | None = None) -> None:
 
     if logged_in:
         print(f"\n✓ NapCat 登录成功，已在后台运行（日志 → {log_file}）")
+        _start_hermes_gateway()
     elif qr_shown:
         print(f"\n  NapCat 仍在运行，扫码后会自动连接。日志 → {log_file}")
     else:
