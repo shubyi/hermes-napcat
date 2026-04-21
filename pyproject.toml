@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-napcat"
+version = "0.1.0"
+description = "NapCat (QQ / OneBot 11) platform adapter for Hermes Agent"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+keywords = ["hermes", "napcat", "qq", "onebot", "chatbot"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Communications :: Chat",
+]
+dependencies = [
+    "aiohttp>=3.9",
+]
+
+[project.scripts]
+hermes-napcat = "hermes_napcat.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/YOUR_NAME/hermes-napcat"
+Issues   = "https://github.com/YOUR_NAME/hermes-napcat/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hermes_napcat*"]
+
+[tool.setuptools.package-data]
+hermes_napcat = ["skills/**/*.md"]

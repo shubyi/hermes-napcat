@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large binaries / installers
+*.zip
+*.deb
+*.tar.gz
+*.tar.bz2
+
+# OMC / Claude state
+.omc/
+.claude/
+
+# Logs
+*.log
+*.log.*
+
+# Secrets
+.env
+*.env.*
