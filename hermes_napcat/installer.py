@@ -176,14 +176,6 @@ def _unpatch_config(hermes_root: Path) -> None:
 # ── Step 3: patch gateway/run.py ─────────────────────────────────────────────
 
 _RUN_MARKER = "# napcat-installed"
-_NAPCAT_RUN_BLOCK = (
-    "\n        elif platform == Platform.NAPCAT:  " + _RUN_MARKER + "\n"
-    "            from gateway.platforms.napcat import NapCatAdapter, check_napcat_requirements\n"
-    "            if not check_napcat_requirements():\n"
-    "                logger.warning('NapCat: aiohttp not installed')\n"
-    "                return None\n"
-    "            return NapCatAdapter(config)\n"
-)
 
 
 def _patch_run(hermes_root: Path) -> None:
@@ -195,29 +187,48 @@ def _patch_run(hermes_root: Path) -> None:
         print("  [=] gateway/run.py already patched")
         return
 
-    # Find _create_adapter and insert before the final else/return None
-    # Look for a pattern like "elif platform == Platform.LAST_PLATFORM:" near end of function
-    # or a final "return None" inside _create_adapter
-    pattern = r'(def _create_adapter\(.*?\):.*?)(        return None)'
-    m = re.search(pattern, src, re.DOTALL)
-    if m:
-        insert_pos = m.start(2)
-        src = src[:insert_pos] + _NAPCAT_RUN_BLOCK + src[insert_pos:]
+    # Locate _create_adapter function definition
+    func_match = re.search(r'^([ \t]*)def _create_adapter\(', src, re.MULTILINE)
+    if not func_match:
+        raise RuntimeError("Could not find _create_adapter in gateway/run.py")
+    func_pos = func_match.start()
+
+    # Detect body indentation from the first elif/return inside the function
+    body_match = re.search(r'\n([ \t]+)(elif|return)\s', src[func_pos:])
+    body_indent = body_match.group(1) if body_match else "        "
+    inner_indent = body_indent + "    "
+
+    napcat_block = (
+        f"\n{body_indent}elif platform == Platform.NAPCAT:  {_RUN_MARKER}\n"
+        f"{inner_indent}from gateway.platforms.napcat import NapCatAdapter, check_napcat_requirements\n"
+        f"{inner_indent}if not check_napcat_requirements():\n"
+        f"{inner_indent}    logger.warning('NapCat: aiohttp not installed')\n"
+        f"{inner_indent}    return None\n"
+        f"{inner_indent}return NapCatAdapter(config)\n"
+    )
+
+    # Insert before the final "return None" inside _create_adapter
+    return_match = re.search(
+        r'(?m)^' + re.escape(body_indent) + r'return None\b',
+        src[func_pos:],
+    )
+    if return_match:
+        insert_pos = func_pos + return_match.start()
+        src = src[:insert_pos] + napcat_block + src[insert_pos:]
     else:
-        # Fallback: find last elif block and add after it
-        last_elif = list(re.finditer(r'        elif platform == Platform\.\w+:', src))
+        # Fallback: insert after the last elif at body indent level
+        last_elif = list(re.finditer(
+            r'(?m)^' + re.escape(body_indent) + r'elif platform == Platform\.\w+:',
+            src[func_pos:],
+        ))
         if not last_elif:
             raise RuntimeError("Could not find adapter dispatch in gateway/run.py")
-        # Find end of this elif block
-        pos = last_elif[-1].start()
-        # Find next elif/else/return at same indent level
-        rest = src[pos:]
-        next_block = re.search(r'\n        (elif|else|return)', rest)
-        if next_block:
-            insert_pos = pos + next_block.start(0) + 1
-        else:
-            insert_pos = len(src)
-        src = src[:insert_pos] + _NAPCAT_RUN_BLOCK + src[insert_pos:]
+        pos = func_pos + last_elif[-1].start()
+        next_block = re.search(
+            r'\n' + re.escape(body_indent) + r'(elif|else|return)', src[pos:]
+        )
+        insert_pos = pos + next_block.start(0) + 1 if next_block else len(src)
+        src = src[:insert_pos] + napcat_block + src[insert_pos:]
 
     _write(path, src)
     print("  [+] Patched gateway/run.py (_create_adapter)")
