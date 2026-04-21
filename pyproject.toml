@@ -24,8 +24,8 @@ dependencies = [
 hermes-napcat = "hermes_napcat.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/YOUR_NAME/hermes-napcat"
-Issues   = "https://github.com/YOUR_NAME/hermes-napcat/issues"
+Homepage = "https://github.com/shubyi/hermes-napcat"
+Issues   = "https://github.com/shubyi/hermes-napcat/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
