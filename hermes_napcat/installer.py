@@ -50,8 +50,10 @@ def find_hermes_dir(hint: str | None = None) -> Path:
 
     raise FileNotFoundError(
         "Cannot locate Hermes Agent installation.\n"
-        "Run from inside the hermes-agent directory, or use --hermes-dir PATH.\n"
-        "Example: hermes-napcat setup --hermes-dir ~/.hermes/hermes-agent"
+        "Install it first:\n"
+        "  git clone https://github.com/NousResearch/hermes-agent ~/.hermes/hermes-agent\n"
+        "  cd ~/.hermes/hermes-agent && pip install -e . --break-system-packages\n"
+        "Or specify the path: hermes-napcat setup --hermes-dir /path/to/hermes-agent"
     )
 
 
