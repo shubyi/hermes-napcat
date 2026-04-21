@@ -38,9 +38,20 @@ def find_hermes_dir(hint: str | None = None) -> Path:
     if spec and spec.origin:
         return Path(spec.origin).parent.parent  # gateway/__init__.py → root
 
+    # Try common install locations
+    candidates = [
+        Path.home() / ".hermes" / "hermes-agent",
+        Path("/opt/hermes-agent"),
+        Path("/usr/local/hermes-agent"),
+    ]
+    for p in candidates:
+        if (p / "gateway" / "__init__.py").exists():
+            return p
+
     raise FileNotFoundError(
         "Cannot locate Hermes Agent installation.\n"
-        "Run from inside the hermes-agent directory, or use --hermes-dir PATH."
+        "Run from inside the hermes-agent directory, or use --hermes-dir PATH.\n"
+        "Example: hermes-napcat setup --hermes-dir ~/.hermes/hermes-agent"
     )
 
 
