@@ -72,13 +72,13 @@ hermes-napcat setup \
   --with-napcat
 ```
 
-### 3. 启动 NapCat 并扫码登录
+### 3. 启动 NapCat
 
 ```bash
 hermes-napcat napcat start
-screen -r napcat    # 在此扫描二维码
-# 登录后按 Ctrl+A 再按 D 退出 screen
 ```
+
+二维码会直接打印在终端，用 QQ 扫码即可登录。再次启动时会自动从缓存 session 登录，无需重新扫码。
 
 ### 4. 启动 Hermes 网关
 
@@ -188,12 +188,22 @@ hermes-napcat systemd remove        移除 systemd 服务
 
 ```yaml
 admins:
-  - "123456789"    # 这些 QQ 号可使用管理指令
+  - "123456789"    # 这些 QQ 号为管理员
 ```
 
 若 `admins` 为空，则所有人均可调用任意工具（开放模式）。
 
-**仅管理员可用的工具：** 踢人、禁言、设置管理员、修改群名、全群禁言、退群、设置群头像、设置专属头衔、设置/删除精华消息、发布/删除群公告、删除群文件、处理加好友/加群请求、删除好友。
+### 权限级别
+
+| 操作 | 普通用户 | 管理员 |
+|------|---------|--------|
+| 只读查询（获取信息、查看状态等） | ✅ | ✅ |
+| QQ 管理工具（禁言、踢人、设置管理员等） | ❌ 被拦截 | ✅ |
+| 系统操作（shell、写文件、删除数据等） | ❌ 被拦截 | ⚠️ 需二次确认 |
+
+当管理员请求破坏性或不可逆操作时，机器人会先说明操作内容，等待管理员回复"确认"后再执行。
+
+**仅管理员可用的 QQ 工具：** 踢人、禁言、设置管理员、修改群名、全群禁言、退群、设置群头像、设置专属头衔、设置/删除精华消息、发布/删除群公告、删除群文件、处理加好友/加群请求、删除好友。
 
 ---
 
@@ -266,7 +276,7 @@ hermes-napcat systemd remove
 | `KeyError: 'napcat'` | `platforms.py` 未打补丁 | 重新运行 `hermes-napcat install` |
 | 所有消息均提示 `Unauthorized user` | `run.py` 缺少认证绕过 | 重新运行 `hermes-napcat install` |
 | `Permission denied: only admins` | 发送者不在管理员列表 | 将 QQ 号加入 `admins`，或设置 `admins: []` 开放模式 |
-| NapCat 二维码不刷新 | screen 会话问题 | `screen -r napcat` 重新附加 |
+| NapCat 二维码未显示 | 启动超时 | 检查日志：`tail -f /tmp/napcat.log`，或重新附加：`screen -r napcat` |
 
 ### 特定 API 提供商说明
 
@@ -281,6 +291,16 @@ elif "your-provider.com" in normalized:
 ```
 
 同样的修改也需要应用到第二处位置（约第 1176 行）以及 `agent/auxiliary_client.py`。
+
+---
+
+## 贡献者
+
+<!-- ALL-CONTRIBUTORS-LIST:START -->
+| 头像 | 名字 | 角色 |
+|------|------|------|
+| [![shubyi](https://github.com/shubyi.png?size=60)](https://github.com/shubyi) | **[shubyi](https://github.com/shubyi)** | 创建者 & 维护者 |
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ---
 

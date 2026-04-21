@@ -72,13 +72,13 @@ hermes-napcat setup \
   --with-napcat
 ```
 
-### 3. Start NapCat and scan the QR code
+### 3. Start NapCat
 
 ```bash
 hermes-napcat napcat start
-screen -r napcat    # scan QR code here
-# Ctrl+A then D to detach after login
 ```
+
+The QR code is printed directly in your terminal. Scan it with the QQ app. On subsequent starts, NapCat auto-logins from cached session — no QR code needed.
 
 ### 4. Start Hermes Gateway
 
@@ -184,16 +184,26 @@ hermes-napcat systemd remove     Remove systemd services
 
 ## Admin System
 
-Set `admins` in config to restrict management commands:
+Set `admins` in config to restrict who can use management commands:
 
 ```yaml
 admins:
-  - "123456789"    # these QQ numbers can use management commands
+  - "123456789"    # these QQ numbers are admins
 ```
 
 If `admins` is empty, all users can call any tool (open mode).
 
-**Admin-only tools:** kick, mute, set_admin, rename group, whole-group ban, leave group, set portrait, set special title, set/delete essence messages, publish/delete notices, delete group files, handle friend/group requests, delete friend.
+### Permission levels
+
+| Operation | Regular user | Admin |
+|-----------|-------------|-------|
+| Read-only queries (get info, check status) | ✅ | ✅ |
+| QQ management tools (mute, kick, set admin, etc.) | ❌ blocked | ✅ |
+| System operations (shell, file writes, delete data) | ❌ blocked | ⚠️ requires confirmation |
+
+When an admin requests a destructive or irreversible operation, the bot always explains what it will do and asks for explicit confirmation (reply "确认") before executing.
+
+**Admin-only QQ tools:** kick, mute, set_admin, rename group, whole-group ban, leave group, set portrait, set special title, set/delete essence messages, publish/delete notices, delete group files, handle friend/group requests, delete friend.
 
 ---
 
@@ -266,7 +276,7 @@ hermes-napcat systemd remove
 | `KeyError: 'napcat'` | `platforms.py` not patched | Re-run `hermes-napcat install` |
 | `Unauthorized user` on all messages | `run.py` auth bypass missing | Re-run `hermes-napcat install` |
 | `Permission denied: only admins` | Sender not in admins list | Add QQ to `admins` in config, or set `admins: []` for open mode |
-| NapCat QR code not refreshing | Screen session issue | `screen -r napcat` to reattach |
+| NapCat QR code not showing | Startup timeout | Check log: `tail -f /tmp/napcat.log` or reattach: `screen -r napcat` |
 
 ### Notes for specific providers
 
@@ -281,6 +291,16 @@ elif "your-provider.com" in normalized:
 ```
 
 Apply the same pattern in the second location (~line 1176) and in `agent/auxiliary_client.py`.
+
+---
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START -->
+| Avatar | Name | Role |
+|--------|------|------|
+| [![shubyi](https://github.com/shubyi.png?size=60)](https://github.com/shubyi) | **[shubyi](https://github.com/shubyi)** | Creator & Maintainer |
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ---
 
