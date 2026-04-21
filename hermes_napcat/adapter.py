@@ -327,8 +327,13 @@ class NapCatAdapter(BasePlatformAdapter):
 
         # In group chats prefix every message with the sender's name so the
         # AI can tell participants apart when the group shares one session.
+        # Skip the prefix for slash commands so the gateway can detect them
+        # correctly — is_command() checks text.startswith("/").
         if is_group and text:
-            text = f"[{sender_name}]: {text}"
+            if text.lstrip().startswith("/"):
+                text = text.lstrip()  # preserve slash command, sender is in channel_prompt
+            else:
+                text = f"[{sender_name}]: {text}"
 
         # Fetch quoted message text for reply context
         reply_id = _extract_reply_id(event.get("message", []))
