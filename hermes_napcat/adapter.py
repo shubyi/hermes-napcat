@@ -398,9 +398,10 @@ class NapCatAdapter(BasePlatformAdapter):
             )
         else:
             permission_prompt = (
-                f"[普通用户] QQ:{sender_id} 仅允许只读查询。"
-                "禁止修改系统、写文件、执行shell、删除数据或调用管理工具。"
-                "如请求此类操作，告知无权限，需联系管理员。"
+                f"[普通用户] QQ:{sender_id}。"
+                "可自由使用搜索、查询、计算、写代码、读文件等所有常规功能。"
+                "禁止：写入/删除系统文件、执行破坏性shell命令、调用QQ管理工具（踢人/禁言等）。"
+                "如请求管理操作，告知需联系管理员。"
             )
 
         message_event = MessageEvent(
