@@ -200,7 +200,9 @@ class NapCatAdapter(BasePlatformAdapter):
 
         self._http_api: str = extra.get("http_api", "").rstrip("/")
         self._access_token: str = extra.get("access_token", "") or ""
-        self._self_id: str = str(extra.get("self_id", ""))
+        raw_self_id = str(extra.get("self_id", ""))
+        # Treat placeholder values as empty so HTTP probe fills in real QQ
+        self._self_id: str = "" if raw_self_id in ("YOUR_QQ_NUMBER", "YOURQQ_NUMBER") else raw_self_id
         self._ws_port: int = int(extra.get("ws_port", 18800))
         self._dm_policy: str = extra.get("dm_policy", "allowlist")
         self._allow_from: list[str] = [str(x) for x in extra.get("allow_from", [])]

@@ -619,17 +619,19 @@ def write_hermes_config(
             return False, f"pyyaml not installed and auto-install failed: {e}"
 
     cfg_path = _hermes_config_path()
-    if not cfg_path.exists():
-        return False, f"Hermes config not found: {cfg_path}"
 
-    # Backup
-    bak = cfg_path.with_suffix(".yaml.napcat.bak")
-    if not bak.exists():
-        import shutil
-        shutil.copy2(cfg_path, bak)
-
-    with cfg_path.open(encoding="utf-8") as f:
-        cfg = yaml.safe_load(f) or {}
+    if cfg_path.exists():
+        # Backup before modifying
+        bak = cfg_path.with_suffix(".yaml.napcat.bak")
+        if not bak.exists():
+            import shutil
+            shutil.copy2(cfg_path, bak)
+        with cfg_path.open(encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+    else:
+        # Create minimal config so NapCat works out of the box
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        cfg = {}
 
     # Merge platforms.napcat
     cfg.setdefault("platforms", {})
@@ -637,11 +639,13 @@ def write_hermes_config(
         cfg["platforms"] = {}
     cfg["platforms"]["napcat"] = _napcat_platform_block(http_port, access_token, ws_port, qq, admins=admins)
 
-    # Register toolset: platform_toolsets.napcat = [hermes-napcat]
+    # Register toolsets: give NapCat the full Hermes CLI toolset + QQ tools
     cfg.setdefault("platform_toolsets", {})
     if not isinstance(cfg["platform_toolsets"], dict):
         cfg["platform_toolsets"] = {}
-    cfg["platform_toolsets"]["napcat"] = ["hermes-napcat"]
+    cfg["platform_toolsets"]["napcat"] = ["hermes-cli", "hermes-napcat"]
+
+    cfg.setdefault("group_sessions_per_user", False)
 
     with cfg_path.open("w", encoding="utf-8") as f:
         yaml.dump(cfg, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
@@ -710,7 +714,9 @@ def _print_instructions(
     if ok:
         print(f"{step}. Hermes config updated automatically → {msg}")
         if not qq:
-            print(f"   ! Remember to set self_id to your QQ number in that file.")
+            print(f"\n   ⚠  self_id is still YOUR_QQ_NUMBER — the bot won't recognise")
+            print(f"      @mentions until you update it. Run:")
+            print(f"      hermes-napcat setup --qq YOUR_ACTUAL_QQ_NUMBER")
         print()
     else:
         print(f"{step}. Add the following to ~/.hermes/config.yaml:\n")
